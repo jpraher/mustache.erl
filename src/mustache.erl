@@ -38,7 +38,7 @@
 compile(Body) when is_list(Body) ->
   State = #mstate{},
   CompiledTemplate = pre_compile(Body, State),
-  % io:format("~p~n~n", [CompiledTemplate]),
+  io:format("~p~n~n", [CompiledTemplate]),
   % io:format(CompiledTemplate ++ "~n", []),
   {ok, Tokens, _} = erl_scan:string(CompiledTemplate),
   {ok, [Form]} = erl_parse:parse_exprs(Tokens),
@@ -56,8 +56,8 @@ compile(Mod, File) ->
   Template = re:replace(TemplateBin, "\"", "\\\\\"", [global, {return,list}]),
   State = #mstate{mod = Mod},
   CompiledTemplate = pre_compile(Template, State),
-  % io:format("~p~n~n", [CompiledTemplate]),
-  % io:format(CompiledTemplate ++ "~n", []),
+  %io:format("~p~n~n", [CompiledTemplate]),
+  %io:format(CompiledTemplate ++ "~n", []),
   {ok, Tokens, _} = erl_scan:string(CompiledTemplate),
   {ok, [Form]} = erl_parse:parse_exprs(Tokens),
   Bindings = erl_eval:new_bindings(),
@@ -111,13 +111,15 @@ compiler(T, State) ->
 compile_section(Name, Content, State) ->
   Mod = State#mstate.mod,
   Result = compiler(Content, State),
-  "fun() -> " ++
+    "fun() -> " ++
+        "% io:format(\"fun ~p ~n\", [Ctx]),\n " ++
     "case mustache:get(" ++ Name ++ ", Ctx, " ++ atom_to_list(Mod) ++ ") of " ++
-      "true -> " ++
+      "\"true\" -> " ++
         Result ++ "; " ++
-      "false -> " ++
+      "\"false\" -> " ++
         "[]; " ++
       "List when is_list(List) -> " ++
+        "% io:format(\"result of " ++  Name  ++ " mustache:get ~p ~n\", [List]),  \n"  ++
         "[fun(Ctx) -> " ++ Result ++ " end(dict:merge(CFun, SubCtx, Ctx)) || SubCtx <- List]; " ++
       "Else -> " ++
         "throw({template, io_lib:format(\"Bad context for ~p: ~p\", [" ++ Name ++ ", Else])}) " ++
@@ -155,19 +157,23 @@ compile_tag("!", _Content, _State) ->
   "[]".
 
 template_path(Mod) ->
-  ModPath = code:which(Mod),
-  re:replace(ModPath, "\.beam$", ".mustache", [{return, list}]).
+    ModPath = code:which(Mod),
+    % io:format("module path path ~p~n", [ModPath]),
+    re:replace(ModPath, "\.beam$", ".mustache", [{return, list}]).
 
 get(Key, Ctx) when is_list(Key) ->
+    % io:format("dict:find ~p~n", [Ctx]),
   {ok, Mod} = dict:find('__mod__', Ctx),
   get(list_to_atom(Key), Ctx, Mod);
 get(Key, Ctx) ->
+    % io:format("dict:find ~p~n", [Ctx]),
   {ok, Mod} = dict:find('__mod__', Ctx),
   get(Key, Ctx, Mod).
 
 get(Key, Ctx, Mod) when is_list(Key) ->
   get(list_to_atom(Key), Ctx, Mod);
 get(Key, Ctx, Mod) ->
+    % io:format("dict:find ~p~n", [Ctx]),
   case dict:find(Key, Ctx) of
     {ok, Val} ->
       % io:format("From Ctx {~p, ~p}~n", [Key, Val]),
