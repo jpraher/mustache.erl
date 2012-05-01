@@ -38,7 +38,7 @@
 compile(Body) when is_list(Body) ->
   State = #mstate{},
   CompiledTemplate = pre_compile(Body, State),
-  io:format("~p~n~n", [CompiledTemplate]),
+  % io:format("~p~n~n", [CompiledTemplate]),
   % io:format(CompiledTemplate ++ "~n", []),
   {ok, Tokens, _} = erl_scan:string(CompiledTemplate),
   {ok, [Form]} = erl_parse:parse_exprs(Tokens),
